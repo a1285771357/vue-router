@@ -1,4 +1,5 @@
 {
-  "presets": ["env", "flow-vue"],
-  "plugins": ["syntax-dynamic-import"]
+  "presets": ["env", "flow-vue", "es2015",
+    "stage-3"],
+  "plugins": ["syntax-dynamic-import", "transform-object-rest-spread"]
 }

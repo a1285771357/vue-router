@@ -1,6 +1,6 @@
 /*!
   * vue-router v3.2.0
-  * (c) 2020 Evan You
+  * (c) 2021 Evan You
   * @license MIT
   */
 /*  */
@@ -1201,8 +1201,10 @@ function findAnchor (children) {
 }
 
 let _Vue;
+let _router;
+const _instances = [];
 
-function install (Vue) {
+function install(Vue) {
   if (install.installed && _Vue === Vue) return
   install.installed = true;
 
@@ -1218,7 +1220,8 @@ function install (Vue) {
   };
 
   Vue.mixin({
-    beforeCreate () {
+    beforeCreate() {
+      _instances.push(this);
       if (isDef(this.$options.router)) {
         this._routerRoot = this;
         this._router = this.$options.router;
@@ -1229,17 +1232,43 @@ function install (Vue) {
       }
       registerInstance(this, this);
     },
-    destroyed () {
+    beforeUpdate() {
+      if (_router) {
+        this.$options.router = _router;
+      }
+      if (isDef(this.$options.router)) {
+        this._routerRoot = this;
+        this._router = this.$options.router;
+        this._router.init(this);
+        Vue.util.defineReactive(this, '_route', this._router.history.current);
+      } else {
+        this._routerRoot = (this.$parent && this.$parent._routerRoot) || this;
+      }
+      registerInstance(this, this);
+    },
+    destroyed() {
       registerInstance(this);
     }
   });
 
   Object.defineProperty(Vue.prototype, '$router', {
-    get () { return this._routerRoot._router }
+    get() { return this._routerRoot._router }
   });
 
   Object.defineProperty(Vue.prototype, '$route', {
-    get () { return this._routerRoot._route }
+    get() { return this._routerRoot._route }
+  });
+
+  Object.defineProperty(Vue.prototype, 'mode', {
+    get() { return this._routerRoot._router.$options.mode },
+    set(mode) {
+      const options = JSON.parse(JSON.stringify(this._routerRoot._router.options));
+      options.mode = mode;
+      _router = new VueRouter(options);
+      _instances.forEach(vm => {
+        vm.$forceUpdate();
+      });
+    }
   });
 
   Vue.component('RouterView', View);
